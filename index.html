@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Calorie Analyzer</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // 🔥 YOUR BACKEND URL - CHANGE THIS TO YOURS
+        const BACKEND_URL = "https://food-analyser-eosin.vercel.app/api/analyze";
+
+        function FoodAnalyzer() {
+            const [selectedImage, setSelectedImage] = useState(null);
+            const [analysisResult, setAnalysisResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const handleImageSelect = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setSelectedImage(e.target.result);
+                        setAnalysisResult(null);
+                        setError(null);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const analyzeImage = async () => {
+                if (!selectedImage) return;
+
+                setLoading(true);
+                setError(null);
+
+                try {
+                    const response = await fetch(BACKEND_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: selectedImage
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Try to parse JSON response from OpenAI
+                        try {
+                            const analysis = JSON.parse(data.analysis);
+                            setAnalysisResult(analysis);
+                        } catch {
+                            // If not JSON, treat as text
+                            setAnalysisResult({ raw: data.analysis });
+                        }
+                    } else {
+                        setError(data.error || 'Analysis failed');
+                    }
+                } catch (err) {
+                    setError('Network error: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const resetAnalysis = () => {
+                setSelectedImage(null);
+                setAnalysisResult(null);
+                setError(null);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-4">
+                    <div className="max-w-md mx-auto">
+                        {/* Header */}
+                        <div className="text-center mb-8 pt-8">
+                            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-white text-2xl">🍽️</span>
+                            </div>
+                            <h1 className="text-2xl font-bold text-white mb-2">Calorie Analyzer</h1>
+                            <p className="text-purple-100">Analyze your food and get nutritional information</p>
+                        </div>
+
+                        {/* Main Content */}
+                        {!selectedImage ? (
+                            /* Camera Button */
+                            <div className="text-center">
+                                <label className="inline-block">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={handleImageSelect}
+                                        className="hidden"
+                                    />
+                                    <div className="w-48 h-48 bg-green-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-600 transition-colors mx-auto">
+                                        <span className="text-white text-6xl">📸</span>
+                                    </div>
+                                </label>
+                                <p className="text-white mt-4 text-lg">Tap to capture food</p>
+                            </div>
+                        ) : (
+                            /* Image and Analysis */
+                            <div className="bg-white rounded-lg p-6 shadow-lg">
+                                {/* Selected Image */}
+                                <div className="mb-6">
+                                    <img
+                                        src={selectedImage}
+                                        alt="Selected food"
+                                        className="w-full h-48 object-cover rounded-lg"
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 mb-6">
+                                    <button
+                                        onClick={analyzeImage}
+                                        disabled={loading}
+                                        className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? 'Analyzing...' : 'Analyze Food'}
+                                    </button>
+                                    <button
+                                        onClick={resetAnalysis}
+                                        className="px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
+
+                                {/* Loading */}
+                                {loading && (
+                                    <div className="text-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                                        <p className="text-gray-600 mt-2">Analyzing your food...</p>
+                                    </div>
+                                )}
+
+                                {/* Error */}
+                                {error && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <p className="text-red-700">⚠️ {error}</p>
+                                    </div>
+                                )}
+
+                                {/* Results */}
+                                {analysisResult && !loading && (
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Nutritional Analysis</h3>
+                                        
+                                        {analysisResult.raw ? (
+                                            /* Plain text response */
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                                <pre className="whitespace-pre-wrap text-sm text-gray-700">
+                                                    {analysisResult.raw}
+                                                </pre>
+                                            </div>
+                                        ) : (
+                                            /* Structured data tables */
+                                            <div className="space-y-4">
+                                                {/* Food Overview */}
+                                                {(analysisResult.foodName || analysisResult.calories) && (
+                                                    <div className="bg-green-50 rounded-lg overflow-hidden">
+                                                        <div className="bg-green-500 text-white px-4 py-2">
+                                                            <h4 className="font-medium">🍎 Food Analysis</h4>
+                                                        </div>
+                                                        <div className="p-4 space-y-2">
+                                                            {analysisResult.foodName && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="font-medium">Food:</span>
+                                                                    <span>{analysisResult.foodName}</span>
+                                                                </div>
+                                                            )}
+                                                            {analysisResult.calories && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="font-medium">Calories:</span>
+                                                                    <span className="font-bold text-green-600">{analysisResult.calories}</span>
+                                                                </div>
+                                                            )}
+                                                            {analysisResult.servingSize && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="font-medium">Serving Size:</span>
+                                                                    <span>{analysisResult.servingSize}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Macronutrients */}
+                                                {analysisResult.macronutrients && (
+                                                    <div className="bg-blue-50 rounded-lg overflow-hidden">
+                                                        <div className="bg-blue-500 text-white px-4 py-2">
+                                                            <h4 className="font-medium">🥗 Macronutrients</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr className="border-b">
+                                                                        <th className="text-left py-1">Nutrient</th>
+                                                                        <th className="text-right py-1">Amount</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="space-y-1">
+                                                                    {Object.entries(analysisResult.macronutrients).map(([key, value]) => (
+                                                                        <tr key={key} className="border-b border-gray-100">
+                                                                            <td className="py-1 capitalize">{key}:</td>
+                                                                            <td className="text-right py-1 font-medium">{value}g</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Health Score */}
+                                                {analysisResult.healthScore && (
+                                                    <div className="bg-purple-50 rounded-lg p-4">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-medium">❤️ Health Score:</span>
+                                                            <span className="text-lg font-bold text-purple-600">
+                                                                {analysisResult.healthScore}/10
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Health Tips */}
+                                                {analysisResult.healthTips && (
+                                                    <div className="bg-yellow-50 rounded-lg overflow-hidden">
+                                                        <div className="bg-yellow-500 text-white px-4 py-2">
+                                                            <h4 className="font-medium">💡 Health Tips</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <ul className="space-y-2 text-sm">
+                                                                {analysisResult.healthTips.map((tip, index) => (
+                                                                    <li key={index} className="flex items-start">
+                                                                        <span className="text-yellow-500 mr-2">•</span>
+                                                                        <span>{tip}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<FoodAnalyzer />, document.getElementById('root'));
+    </script>
+</body>
+</html>
