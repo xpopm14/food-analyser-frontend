@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalóriový Ščítáč</title>
+    <title>Pocitame Kalorie s Bebcou a Ivanom </title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -25,7 +25,7 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // 🔥 YOUR BACKEND URL
+        // 🔥 YOUR BACKEND URL - BACK TO WORKING VERSION
         const BACKEND_URL = "https://food-analyser-eosin.vercel.app/api/analyze";
 
         function FoodAnalyzer() {
@@ -67,11 +67,9 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        // Enhanced JSON parsing with multiple fallback strategies
+                        // Simple JSON parsing - the version that worked
                         try {
-                            // Strategy 1: Clean markdown code blocks
                             let cleanResponse = data.analysis.trim();
-                            
                             if (cleanResponse.startsWith('```json')) {
                                 cleanResponse = cleanResponse.replace('```json', '').replace(/```$/, '').trim();
                             } else if (cleanResponse.startsWith('```')) {
@@ -82,41 +80,16 @@
                             setAnalysisResult(analysis);
                         } catch (parseError) {
                             console.log('Parse error:', parseError);
-                            console.log('Raw response:', data.analysis);
-                            
-                            // Strategy 2: Extract JSON from text
-                            const jsonMatch = data.analysis.match(/\{[\s\S]*\}/);
-                            if (jsonMatch) {
-                                try {
-                                    const analysis = JSON.parse(jsonMatch[0]);
-                                    setAnalysisResult(analysis);
-                                } catch {
-                                    // Strategy 3: Try to create simple analysis from text
-                                    setAnalysisResult(createSimpleAnalysis(data.analysis));
-                                }
-                            } else {
-                                // Strategy 4: Show formatted text
-                                setAnalysisResult(createSimpleAnalysis(data.analysis));
-                            }
+                            setAnalysisResult({ raw: data.analysis });
                         }
                     } else {
-                        setError(data.error || 'Analýza zlyhala. Skús to znova s jasnejšou fotkou.');
+                        setError(data.error || 'Analýza zlyhala');
                     }
                 } catch (err) {
-                    setError('Chyba pripojenia. Skontroluj internetové pripojenie a skús znova.');
-                    console.error('Network error:', err);
+                    setError('Chyba siete: ' + err.message);
                 } finally {
                     setLoading(false);
                 }
-            };
-
-            // Helper function to create simple analysis from text
-            const createSimpleAnalysis = (text) => {
-                return {
-                    nazovJedla: "Detailné jedlo",
-                    popis: text,
-                    raw: text
-                };
             };
 
             const resetAnalysis = () => {
@@ -196,7 +169,6 @@
                                 {error && (
                                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                                         <p className="text-red-700">⚠️ {error}</p>
-                                        <p className="text-red-600 text-sm mt-2">💡 Tip: Skús urobiť jasnejšiu fotku jedla alebo sa uisti, že je jedlo dobre viditeľné.</p>
                                     </div>
                                 )}
 
@@ -205,21 +177,18 @@
                                     <div className="space-y-4">
                                         <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Nutričná Analýza</h3>
                                         
-                                        {(analysisResult.raw || analysisResult.popis) ? (
-                                            /* Text response - nicely formatted */
-                                            <div className="bg-blue-50 rounded-lg p-4">
-                                                <div className="bg-blue-500 text-white px-4 py-2 -mx-4 -mt-4 mb-4 rounded-t-lg">
-                                                    <h4 className="font-medium">🍽️ Analýza Jedla</h4>
-                                                </div>
-                                                <div className="text-gray-700 leading-relaxed">
-                                                    {analysisResult.popis || analysisResult.raw}
-                                                </div>
+                                        {analysisResult.raw ? (
+                                            /* Plain text response - formatted nicely */
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                                <pre className="whitespace-pre-wrap text-sm text-gray-700">
+                                                    {analysisResult.raw}
+                                                </pre>
                                             </div>
                                         ) : (
                                             /* Structured data tables */
                                             <div className="space-y-4">
                                                 {/* Food Overview */}
-                                                {(analysisResult.nazovJedla || analysisResult.kalorie) && (
+                                                {(analysisResult.nazovJedla || analysisResult.kalorie || analysisResult.foodName || analysisResult.calories) && (
                                                     <div className="bg-green-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-green-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">🍎 Analýza Jedla</h4>
@@ -227,22 +196,22 @@
                                                         <div className="p-4">
                                                             <table className="w-full">
                                                                 <tbody>
-                                                                    {analysisResult.nazovJedla && (
+                                                                    {(analysisResult.nazovJedla || analysisResult.foodName) && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Jedlo:</td>
-                                                                            <td className="py-2 text-right font-semibold text-green-700">{analysisResult.nazovJedla}</td>
+                                                                            <td className="py-2 text-right font-semibold text-green-700">{analysisResult.nazovJedla || analysisResult.foodName}</td>
                                                                         </tr>
                                                                     )}
-                                                                    {analysisResult.kalorie && (
+                                                                    {(analysisResult.kalorie || analysisResult.calories) && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Kalórie:</td>
-                                                                            <td className="py-2 text-right font-bold text-green-600 text-lg">{analysisResult.kalorie}</td>
+                                                                            <td className="py-2 text-right font-bold text-green-600 text-lg">{analysisResult.kalorie || analysisResult.calories}</td>
                                                                         </tr>
                                                                     )}
-                                                                    {analysisResult.velkostPorcie && (
+                                                                    {(analysisResult.velkostPorcie || analysisResult.servingSize) && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Veľkosť Porcie:</td>
-                                                                            <td className="py-2 text-right text-gray-600">{analysisResult.velkostPorcie}</td>
+                                                                            <td className="py-2 text-right text-gray-600">{analysisResult.velkostPorcie || analysisResult.servingSize}</td>
                                                                         </tr>
                                                                     )}
                                                                 </tbody>
@@ -252,7 +221,7 @@
                                                 )}
 
                                                 {/* Macronutrients */}
-                                                {analysisResult.makronutrienty && (
+                                                {(analysisResult.makronutrienty || analysisResult.macronutrients) && (
                                                     <div className="bg-blue-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-blue-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">🥗 Makronutrienty</h4>
@@ -266,12 +235,23 @@
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {Object.entries(analysisResult.makronutrienty).map(([key, value]) => (
-                                                                        <tr key={key} className="table-row border-b border-blue-100">
-                                                                            <td className="py-2 text-gray-700 capitalize">{key}:</td>
-                                                                            <td className="text-right py-2 font-medium text-blue-700">{value}g</td>
-                                                                        </tr>
-                                                                    ))}
+                                                                    {Object.entries(analysisResult.makronutrienty || analysisResult.macronutrients).map(([key, value]) => {
+                                                                        const slovakNames = {
+                                                                            'protein': 'Bielkoviny',
+                                                                            'carbohydrates': 'Sacharidy',
+                                                                            'fat': 'Tuky',
+                                                                            'fiber': 'Vláknina',
+                                                                            'sugar': 'Cukry'
+                                                                        };
+                                                                        const displayName = slovakNames[key.toLowerCase()] || key.charAt(0).toUpperCase() + key.slice(1);
+                                                                        
+                                                                        return (
+                                                                            <tr key={key} className="table-row border-b border-blue-100">
+                                                                                <td className="py-2 text-gray-700">{displayName}:</td>
+                                                                                <td className="text-right py-2 font-medium text-blue-700">{value}g</td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
                                                                 </tbody>
                                                             </table>
                                                         </div>
@@ -279,26 +259,26 @@
                                                 )}
 
                                                 {/* Health Score */}
-                                                {analysisResult.zdravotneSkore && (
+                                                {(analysisResult.zdravotneSkore || analysisResult.healthScore) && (
                                                     <div className="bg-purple-50 rounded-lg p-4 shadow-sm">
                                                         <div className="flex justify-between items-center">
                                                             <span className="font-medium text-purple-800 flex items-center">❤️ Zdravotné Skóre:</span>
                                                             <span className="text-2xl font-bold text-purple-600">
-                                                                {analysisResult.zdravotneSkore}/10
+                                                                {analysisResult.zdravotneSkore || analysisResult.healthScore}/10
                                                             </span>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Health Tips */}
-                                                {analysisResult.zdravotneRady && (
+                                                {(analysisResult.zdravotneRady || analysisResult.healthTips) && (
                                                     <div className="bg-yellow-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-yellow-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">💡 Zdravotné Rady</h4>
                                                         </div>
                                                         <div className="p-4">
                                                             <ul className="space-y-3">
-                                                                {analysisResult.zdravotneRady.map((tip, index) => (
+                                                                {(analysisResult.zdravotneRady || analysisResult.healthTips).map((tip, index) => (
                                                                     <li key={index} className="flex items-start">
                                                                         <span className="text-yellow-500 mr-3 mt-1 text-sm">●</span>
                                                                         <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
