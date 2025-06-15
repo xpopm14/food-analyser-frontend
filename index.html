@@ -9,7 +9,14 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0;
+            padding: 0;
+        }
+        .table-row:nth-child(even) {
+            background-color: #f9fafb;
+        }
     </style>
 </head>
 <body>
@@ -18,7 +25,7 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // 🔥 YOUR BACKEND URL - CHANGE THIS TO YOURS
+        // 🔥 YOUR BACKEND URL - ALREADY SET TO YOURS
         const BACKEND_URL = "https://food-analyser-eosin.vercel.app/api/analyze";
 
         function FoodAnalyzer() {
@@ -60,13 +67,37 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        // Try to parse JSON response from OpenAI
+                        // Enhanced JSON parsing with better error handling
                         try {
-                            const analysis = JSON.parse(data.analysis);
+                            // Clean the response - remove markdown code blocks if present
+                            let cleanResponse = data.analysis.trim();
+                            
+                            // Remove ```json and ``` markers
+                            if (cleanResponse.startsWith('```json')) {
+                                cleanResponse = cleanResponse.replace('```json', '').replace(/```$/, '').trim();
+                            } else if (cleanResponse.startsWith('```')) {
+                                cleanResponse = cleanResponse.replace(/```[\w]*/, '').replace(/```$/, '').trim();
+                            }
+                            
+                            const analysis = JSON.parse(cleanResponse);
                             setAnalysisResult(analysis);
-                        } catch {
-                            // If not JSON, treat as text
-                            setAnalysisResult({ raw: data.analysis });
+                        } catch (parseError) {
+                            console.log('Parse error:', parseError);
+                            console.log('Raw response:', data.analysis);
+                            
+                            // Try to extract JSON from text
+                            const jsonMatch = data.analysis.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                try {
+                                    const analysis = JSON.parse(jsonMatch[0]);
+                                    setAnalysisResult(analysis);
+                                } catch {
+                                    // If all parsing fails, show raw text in a nice format
+                                    setAnalysisResult({ raw: data.analysis });
+                                }
+                            } else {
+                                setAnalysisResult({ raw: data.analysis });
+                            }
                         }
                     } else {
                         setError(data.error || 'Analysis failed');
@@ -108,7 +139,7 @@
                                         onChange={handleImageSelect}
                                         className="hidden"
                                     />
-                                    <div className="w-48 h-48 bg-green-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-600 transition-colors mx-auto">
+                                    <div className="w-48 h-48 bg-green-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-600 transition-colors mx-auto shadow-lg">
                                         <span className="text-white text-6xl">📸</span>
                                     </div>
                                 </label>
@@ -122,7 +153,7 @@
                                     <img
                                         src={selectedImage}
                                         alt="Selected food"
-                                        className="w-full h-48 object-cover rounded-lg"
+                                        className="w-full h-48 object-cover rounded-lg shadow-md"
                                     />
                                 </div>
 
@@ -131,13 +162,13 @@
                                     <button
                                         onClick={analyzeImage}
                                         disabled={loading}
-                                        className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         {loading ? 'Analyzing...' : 'Analyze Food'}
                                     </button>
                                     <button
                                         onClick={resetAnalysis}
-                                        className="px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                        className="px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                                     >
                                         Reset
                                     </button>
@@ -164,7 +195,7 @@
                                         <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Nutritional Analysis</h3>
                                         
                                         {analysisResult.raw ? (
-                                            /* Plain text response */
+                                            /* Plain text response - formatted nicely */
                                             <div className="bg-gray-50 rounded-lg p-4">
                                                 <pre className="whitespace-pre-wrap text-sm text-gray-700">
                                                     {analysisResult.raw}
@@ -175,52 +206,110 @@
                                             <div className="space-y-4">
                                                 {/* Food Overview */}
                                                 {(analysisResult.foodName || analysisResult.calories) && (
-                                                    <div className="bg-green-50 rounded-lg overflow-hidden">
-                                                        <div className="bg-green-500 text-white px-4 py-2">
-                                                            <h4 className="font-medium">🍎 Food Analysis</h4>
+                                                    <div className="bg-green-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-green-500 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">🍎 Food Analysis</h4>
                                                         </div>
-                                                        <div className="p-4 space-y-2">
-                                                            {analysisResult.foodName && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="font-medium">Food:</span>
-                                                                    <span>{analysisResult.foodName}</span>
-                                                                </div>
-                                                            )}
-                                                            {analysisResult.calories && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="font-medium">Calories:</span>
-                                                                    <span className="font-bold text-green-600">{analysisResult.calories}</span>
-                                                                </div>
-                                                            )}
-                                                            {analysisResult.servingSize && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="font-medium">Serving Size:</span>
-                                                                    <span>{analysisResult.servingSize}</span>
-                                                                </div>
-                                                            )}
+                                                        <div className="p-4">
+                                                            <table className="w-full">
+                                                                <tbody>
+                                                                    {analysisResult.foodName && (
+                                                                        <tr className="table-row">
+                                                                            <td className="py-2 font-medium text-gray-700">Food:</td>
+                                                                            <td className="py-2 text-right font-semibold text-green-700">{analysisResult.foodName}</td>
+                                                                        </tr>
+                                                                    )}
+                                                                    {analysisResult.calories && (
+                                                                        <tr className="table-row">
+                                                                            <td className="py-2 font-medium text-gray-700">Calories:</td>
+                                                                            <td className="py-2 text-right font-bold text-green-600 text-lg">{analysisResult.calories}</td>
+                                                                        </tr>
+                                                                    )}
+                                                                    {analysisResult.servingSize && (
+                                                                        <tr className="table-row">
+                                                                            <td className="py-2 font-medium text-gray-700">Serving Size:</td>
+                                                                            <td className="py-2 text-right text-gray-600">{analysisResult.servingSize}</td>
+                                                                        </tr>
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Macronutrients */}
                                                 {analysisResult.macronutrients && (
-                                                    <div className="bg-blue-50 rounded-lg overflow-hidden">
-                                                        <div className="bg-blue-500 text-white px-4 py-2">
-                                                            <h4 className="font-medium">🥗 Macronutrients</h4>
+                                                    <div className="bg-blue-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-blue-500 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">🥗 Macronutrients</h4>
                                                         </div>
                                                         <div className="p-4">
-                                                            <table className="w-full text-sm">
+                                                            <table className="w-full">
                                                                 <thead>
-                                                                    <tr className="border-b">
-                                                                        <th className="text-left py-1">Nutrient</th>
-                                                                        <th className="text-right py-1">Amount</th>
+                                                                    <tr className="border-b-2 border-blue-200">
+                                                                        <th className="text-left py-2 font-semibold text-blue-800">Nutrient</th>
+                                                                        <th className="text-right py-2 font-semibold text-blue-800">Amount</th>
                                                                     </tr>
                                                                 </thead>
-                                                                <tbody className="space-y-1">
+                                                                <tbody>
                                                                     {Object.entries(analysisResult.macronutrients).map(([key, value]) => (
-                                                                        <tr key={key} className="border-b border-gray-100">
-                                                                            <td className="py-1 capitalize">{key}:</td>
-                                                                            <td className="text-right py-1 font-medium">{value}g</td>
+                                                                        <tr key={key} className="table-row border-b border-blue-100">
+                                                                            <td className="py-2 capitalize text-gray-700">{key.replace(/([A-Z])/g, ' $1')}:</td>
+                                                                            <td className="text-right py-2 font-medium text-blue-700">{value}g</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Vitamins */}
+                                                {analysisResult.vitamins && (
+                                                    <div className="bg-orange-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-orange-500 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">🍊 Vitamins</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <table className="w-full">
+                                                                <thead>
+                                                                    <tr className="border-b-2 border-orange-200">
+                                                                        <th className="text-left py-2 font-semibold text-orange-800">Vitamin</th>
+                                                                        <th className="text-right py-2 font-semibold text-orange-800">Daily Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {Object.entries(analysisResult.vitamins).map(([key, value]) => (
+                                                                        <tr key={key} className="table-row border-b border-orange-100">
+                                                                            <td className="py-2 capitalize text-gray-700">{key.replace(/([A-Z])/g, ' $1')}:</td>
+                                                                            <td className="text-right py-2 font-medium text-orange-700">{value}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Minerals */}
+                                                {analysisResult.minerals && (
+                                                    <div className="bg-gray-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-gray-600 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">⚡ Minerals</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <table className="w-full">
+                                                                <thead>
+                                                                    <tr className="border-b-2 border-gray-300">
+                                                                        <th className="text-left py-2 font-semibold text-gray-800">Mineral</th>
+                                                                        <th className="text-right py-2 font-semibold text-gray-800">Daily Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {Object.entries(analysisResult.minerals).map(([key, value]) => (
+                                                                        <tr key={key} className="table-row border-b border-gray-200">
+                                                                            <td className="py-2 capitalize text-gray-700">{key}:</td>
+                                                                            <td className="text-right py-2 font-medium text-gray-700">{value}</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -231,10 +320,10 @@
 
                                                 {/* Health Score */}
                                                 {analysisResult.healthScore && (
-                                                    <div className="bg-purple-50 rounded-lg p-4">
+                                                    <div className="bg-purple-50 rounded-lg p-4 shadow-sm">
                                                         <div className="flex justify-between items-center">
-                                                            <span className="font-medium">❤️ Health Score:</span>
-                                                            <span className="text-lg font-bold text-purple-600">
+                                                            <span className="font-medium text-purple-800 flex items-center">❤️ Health Score:</span>
+                                                            <span className="text-2xl font-bold text-purple-600">
                                                                 {analysisResult.healthScore}/10
                                                             </span>
                                                         </div>
@@ -243,16 +332,16 @@
 
                                                 {/* Health Tips */}
                                                 {analysisResult.healthTips && (
-                                                    <div className="bg-yellow-50 rounded-lg overflow-hidden">
-                                                        <div className="bg-yellow-500 text-white px-4 py-2">
-                                                            <h4 className="font-medium">💡 Health Tips</h4>
+                                                    <div className="bg-yellow-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-yellow-500 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">💡 Health Tips</h4>
                                                         </div>
                                                         <div className="p-4">
-                                                            <ul className="space-y-2 text-sm">
+                                                            <ul className="space-y-3">
                                                                 {analysisResult.healthTips.map((tip, index) => (
                                                                     <li key={index} className="flex items-start">
-                                                                        <span className="text-yellow-500 mr-2">•</span>
-                                                                        <span>{tip}</span>
+                                                                        <span className="text-yellow-500 mr-3 mt-1 text-sm">●</span>
+                                                                        <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
                                                                     </li>
                                                                 ))}
                                                             </ul>
