@@ -25,7 +25,7 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // 🔥 YOUR BACKEND URL - ALREADY SET TO YOURS
+        // 🔥 YOUR BACKEND URL
         const BACKEND_URL = "https://food-analyser-eosin.vercel.app/api/analyze";
 
         function FoodAnalyzer() {
@@ -67,12 +67,11 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        // Enhanced JSON parsing with better error handling
+                        // Enhanced JSON parsing with multiple fallback strategies
                         try {
-                            // Clean the response - remove markdown code blocks if present
+                            // Strategy 1: Clean markdown code blocks
                             let cleanResponse = data.analysis.trim();
                             
-                            // Remove ```json and ``` markers
                             if (cleanResponse.startsWith('```json')) {
                                 cleanResponse = cleanResponse.replace('```json', '').replace(/```$/, '').trim();
                             } else if (cleanResponse.startsWith('```')) {
@@ -85,28 +84,39 @@
                             console.log('Parse error:', parseError);
                             console.log('Raw response:', data.analysis);
                             
-                            // Try to extract JSON from text
+                            // Strategy 2: Extract JSON from text
                             const jsonMatch = data.analysis.match(/\{[\s\S]*\}/);
                             if (jsonMatch) {
                                 try {
                                     const analysis = JSON.parse(jsonMatch[0]);
                                     setAnalysisResult(analysis);
                                 } catch {
-                                    // If all parsing fails, show raw text in a nice format
-                                    setAnalysisResult({ raw: data.analysis });
+                                    // Strategy 3: Try to create simple analysis from text
+                                    setAnalysisResult(createSimpleAnalysis(data.analysis));
                                 }
                             } else {
-                                setAnalysisResult({ raw: data.analysis });
+                                // Strategy 4: Show formatted text
+                                setAnalysisResult(createSimpleAnalysis(data.analysis));
                             }
                         }
                     } else {
-                        setError(data.error || 'Analýza zlyhala');
+                        setError(data.error || 'Analýza zlyhala. Skús to znova s jasnejšou fotkou.');
                     }
                 } catch (err) {
-                    setError('Chyba siete: ' + err.message);
+                    setError('Chyba pripojenia. Skontroluj internetové pripojenie a skús znova.');
+                    console.error('Network error:', err);
                 } finally {
                     setLoading(false);
                 }
+            };
+
+            // Helper function to create simple analysis from text
+            const createSimpleAnalysis = (text) => {
+                return {
+                    nazovJedla: "Detailné jedlo",
+                    popis: text,
+                    raw: text
+                };
             };
 
             const resetAnalysis = () => {
@@ -123,8 +133,8 @@
                             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <span className="text-white text-2xl">🍽️</span>
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-2">Ivan a Bebca pocitaju kalorie</h1>
-                            <p className="text-purple-100">Skontroluj co davas do pusy, nech nejsi potom jak sud! :)</p>
+                            <h1 className="text-2xl font-bold text-white mb-2">Kalóriový Ščítáč</h1>
+                            <p className="text-purple-100">Skontroluj žrádlo, nech nejsi potom jak sud</p>
                         </div>
 
                         {/* Main Content */}
@@ -186,6 +196,7 @@
                                 {error && (
                                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                                         <p className="text-red-700">⚠️ {error}</p>
+                                        <p className="text-red-600 text-sm mt-2">💡 Tip: Skús urobiť jasnejšiu fotku jedla alebo sa uisti, že je jedlo dobre viditeľné.</p>
                                     </div>
                                 )}
 
@@ -194,18 +205,21 @@
                                     <div className="space-y-4">
                                         <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Nutričná Analýza</h3>
                                         
-                                        {analysisResult.raw ? (
-                                            /* Plain text response - formatted nicely */
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                                <pre className="whitespace-pre-wrap text-sm text-gray-700">
-                                                    {analysisResult.raw}
-                                                </pre>
+                                        {(analysisResult.raw || analysisResult.popis) ? (
+                                            /* Text response - nicely formatted */
+                                            <div className="bg-blue-50 rounded-lg p-4">
+                                                <div className="bg-blue-500 text-white px-4 py-2 -mx-4 -mt-4 mb-4 rounded-t-lg">
+                                                    <h4 className="font-medium">🍽️ Analýza Jedla</h4>
+                                                </div>
+                                                <div className="text-gray-700 leading-relaxed">
+                                                    {analysisResult.popis || analysisResult.raw}
+                                                </div>
                                             </div>
                                         ) : (
                                             /* Structured data tables */
                                             <div className="space-y-4">
                                                 {/* Food Overview */}
-                                                {(analysisResult.nazovJedla || analysisResult.kalorie || analysisResult.foodName || analysisResult.calories) && (
+                                                {(analysisResult.nazovJedla || analysisResult.kalorie) && (
                                                     <div className="bg-green-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-green-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">🍎 Analýza Jedla</h4>
@@ -213,22 +227,22 @@
                                                         <div className="p-4">
                                                             <table className="w-full">
                                                                 <tbody>
-                                                                    {(analysisResult.nazovJedla || analysisResult.foodName) && (
+                                                                    {analysisResult.nazovJedla && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Jedlo:</td>
-                                                                            <td className="py-2 text-right font-semibold text-green-700">{analysisResult.nazovJedla || analysisResult.foodName}</td>
+                                                                            <td className="py-2 text-right font-semibold text-green-700">{analysisResult.nazovJedla}</td>
                                                                         </tr>
                                                                     )}
-                                                                    {(analysisResult.kalorie || analysisResult.calories) && (
+                                                                    {analysisResult.kalorie && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Kalórie:</td>
-                                                                            <td className="py-2 text-right font-bold text-green-600 text-lg">{analysisResult.kalorie || analysisResult.calories}</td>
+                                                                            <td className="py-2 text-right font-bold text-green-600 text-lg">{analysisResult.kalorie}</td>
                                                                         </tr>
                                                                     )}
-                                                                    {(analysisResult.velkostPorcie || analysisResult.servingSize) && (
+                                                                    {analysisResult.velkostPorcie && (
                                                                         <tr className="table-row">
                                                                             <td className="py-2 font-medium text-gray-700">Veľkosť Porcie:</td>
-                                                                            <td className="py-2 text-right text-gray-600">{analysisResult.velkostPorcie || analysisResult.servingSize}</td>
+                                                                            <td className="py-2 text-right text-gray-600">{analysisResult.velkostPorcie}</td>
                                                                         </tr>
                                                                     )}
                                                                 </tbody>
@@ -238,7 +252,7 @@
                                                 )}
 
                                                 {/* Macronutrients */}
-                                                {(analysisResult.makronutrienty || analysisResult.macronutrients) && (
+                                                {analysisResult.makronutrienty && (
                                                     <div className="bg-blue-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-blue-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">🥗 Makronutrienty</h4>
@@ -252,81 +266,10 @@
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {Object.entries(analysisResult.makronutrienty || analysisResult.macronutrients).map(([key, value]) => {
-                                                                        // Translate nutrient names to Slovak
-                                                                        const slovakNames = {
-                                                                            'protein': 'Bielkoviny',
-                                                                            'carbohydrates': 'Sacharidy',
-                                                                            'fat': 'Tuky',
-                                                                            'fiber': 'Vláknina',
-                                                                            'sugar': 'Cukry',
-                                                                            'bielkoviny': 'Bielkoviny',
-                                                                            'sacharidy': 'Sacharidy',
-                                                                            'tuky': 'Tuky',
-                                                                            'vlaknina': 'Vláknina',
-                                                                            'cukry': 'Cukry'
-                                                                        };
-                                                                        const displayName = slovakNames[key.toLowerCase()] || key.charAt(0).toUpperCase() + key.slice(1);
-                                                                        
-                                                                        return (
-                                                                            <tr key={key} className="table-row border-b border-blue-100">
-                                                                                <td className="py-2 text-gray-700">{displayName}:</td>
-                                                                                <td className="text-right py-2 font-medium text-blue-700">{value}g</td>
-                                                                            </tr>
-                                                                        );
-                                                                    })}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Vitamins */}
-                                                {(analysisResult.vitaminy || analysisResult.vitamins) && (
-                                                    <div className="bg-orange-50 rounded-lg overflow-hidden shadow-sm">
-                                                        <div className="bg-orange-500 text-white px-4 py-3">
-                                                            <h4 className="font-medium flex items-center">🍊 Vitamíny</h4>
-                                                        </div>
-                                                        <div className="p-4">
-                                                            <table className="w-full">
-                                                                <thead>
-                                                                    <tr className="border-b-2 border-orange-200">
-                                                                        <th className="text-left py-2 font-semibold text-orange-800">Vitamín</th>
-                                                                        <th className="text-right py-2 font-semibold text-orange-800">Denná Hodnota</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {Object.entries(analysisResult.vitaminy || analysisResult.vitamins).map(([key, value]) => (
-                                                                        <tr key={key} className="table-row border-b border-orange-100">
-                                                                            <td className="py-2 capitalize text-gray-700">{key.replace(/([A-Z])/g, ' $1')}:</td>
-                                                                            <td className="text-right py-2 font-medium text-orange-700">{value}</td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Minerals */}
-                                                {(analysisResult.mineraly || analysisResult.minerals) && (
-                                                    <div className="bg-gray-50 rounded-lg overflow-hidden shadow-sm">
-                                                        <div className="bg-gray-600 text-white px-4 py-3">
-                                                            <h4 className="font-medium flex items-center">⚡ Minerály</h4>
-                                                        </div>
-                                                        <div className="p-4">
-                                                            <table className="w-full">
-                                                                <thead>
-                                                                    <tr className="border-b-2 border-gray-300">
-                                                                        <th className="text-left py-2 font-semibold text-gray-800">Minerál</th>
-                                                                        <th className="text-right py-2 font-semibold text-gray-800">Denná Hodnota</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {Object.entries(analysisResult.mineraly || analysisResult.minerals).map(([key, value]) => (
-                                                                        <tr key={key} className="table-row border-b border-gray-200">
-                                                                            <td className="py-2 capitalize text-gray-700">{key}:</td>
-                                                                            <td className="text-right py-2 font-medium text-gray-700">{value}</td>
+                                                                    {Object.entries(analysisResult.makronutrienty).map(([key, value]) => (
+                                                                        <tr key={key} className="table-row border-b border-blue-100">
+                                                                            <td className="py-2 text-gray-700 capitalize">{key}:</td>
+                                                                            <td className="text-right py-2 font-medium text-blue-700">{value}g</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -336,26 +279,26 @@
                                                 )}
 
                                                 {/* Health Score */}
-                                                {(analysisResult.zdravotneSkore || analysisResult.healthScore) && (
+                                                {analysisResult.zdravotneSkore && (
                                                     <div className="bg-purple-50 rounded-lg p-4 shadow-sm">
                                                         <div className="flex justify-between items-center">
                                                             <span className="font-medium text-purple-800 flex items-center">❤️ Zdravotné Skóre:</span>
                                                             <span className="text-2xl font-bold text-purple-600">
-                                                                {analysisResult.zdravotneSkore || analysisResult.healthScore}/10
+                                                                {analysisResult.zdravotneSkore}/10
                                                             </span>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Health Tips */}
-                                                {(analysisResult.zdravotneRady || analysisResult.healthTips) && (
+                                                {analysisResult.zdravotneRady && (
                                                     <div className="bg-yellow-50 rounded-lg overflow-hidden shadow-sm">
                                                         <div className="bg-yellow-500 text-white px-4 py-3">
                                                             <h4 className="font-medium flex items-center">💡 Zdravotné Rady</h4>
                                                         </div>
                                                         <div className="p-4">
                                                             <ul className="space-y-3">
-                                                                {(analysisResult.zdravotneRady || analysisResult.healthTips).map((tip, index) => (
+                                                                {analysisResult.zdravotneRady.map((tip, index) => (
                                                                     <li key={index} className="flex items-start">
                                                                         <span className="text-yellow-500 mr-3 mt-1 text-sm">●</span>
                                                                         <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
