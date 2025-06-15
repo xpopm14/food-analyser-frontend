@@ -131,14 +131,26 @@ const BACKEND_URL = "https://food-backend-v2.vercel.app/api/analyze";
                         ) : (
                             /* Image and Analysis */
                             <div className="bg-white rounded-lg p-6 shadow-lg">
-                                {/* Selected Image */}
-                                <div className="mb-6">
-                                    <img
-                                        src={selectedImage}
-                                        alt="Vybrané jedlo"
-                    className="w-full max-h-64 object-contain rounded-lg shadow-md bg-gray-100"
-                                    />
-                                </div>
+                               {/* Selected Image */}
+<div className="mb-6">
+    <div className="bg-gray-100 rounded-lg p-2">
+        <img
+            src={selectedImage}
+            alt="Vybrané jedlo"
+            className="w-full max-h-80 object-contain rounded-lg shadow-md mx-auto block"
+            style={{
+                objectFit: 'contain',
+                maxHeight: '320px',
+                width: 'auto',
+                height: 'auto'
+            }}
+        />
+    </div>
+    <p className="text-xs text-gray-500 text-center mt-2">
+        Celý obrázok bude analyzovaný
+    </p>
+</div>
+
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-3 mb-6">
