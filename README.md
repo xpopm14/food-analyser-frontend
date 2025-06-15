@@ -1,0 +1,1 @@
+# food-analyser-frontend
