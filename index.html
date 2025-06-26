@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analyzer jedla</title>
+    <title>Kalóriový Ščítáč</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -141,8 +141,8 @@
                             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <span className="text-white text-2xl">🍽️</span>
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-2">Analyzer jedla</h1>
-                            <p className="text-purple-100">Precizna analyza jedla</p>
+                            <h1 className="text-2xl font-bold text-white mb-2">Kalóriový Ščítáč</h1>
+                            <p className="text-purple-100">Skontroluj žrádlo, nech nejsi potom jak sud</p>
                         </div>
 
                         {/* Main Content */}
@@ -235,14 +235,21 @@
                                         {/* Correction Form */}
                                         {showCorrectionForm && (
                                             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                                                <h4 className="font-medium text-orange-800 mb-2">🔧 Oprav analýzu</h4>
+                                                <h4 className="font-medium text-orange-800 mb-2">🔧 Oprav len časť analýzy</h4>
                                                 <p className="text-sm text-orange-700 mb-3">
-                                                    Napíš čo je na obrázku skutočne, ak AI neidentifikovalo jedlo správne:
+                                                    Špecifikuj len to, čo chceš opraviť. Ostatné zostane nezmenené:
                                                 </p>
+                                                <div className="bg-orange-100 rounded p-2 mb-3 text-xs text-orange-800">
+                                                    <p><strong>Príklady dobrých opráv:</strong></p>
+                                                    <p>• "To mäso nie je bravčové, ale kuracie"</p>
+                                                    <p>• "To nie je syr, ale tvaroh"</p>
+                                                    <p>• "Pridaj tam aj čerstvú papriku čo vidím"</p>
+                                                    <p>• "Tie halušky sú s bryndzou, nie s maslom"</p>
+                                                </div>
                                                 <textarea
                                                     value={correctionText}
                                                     onChange={(e) => setCorrectionText(e.target.value)}
-                                                    placeholder="Napr: 'To nie sú pirohy, ale sú to halušky s bryndzou a slaninou'"
+                                                    placeholder="Napr: 'To mäso nie je bravčové ale kuracie' alebo 'Pridaj tam aj tie rajčiny čo tam vidím'"
                                                     className="w-full p-3 border border-orange-300 rounded-lg text-sm resize-none"
                                                     rows="3"
                                                     disabled={correctionLoading}
@@ -253,9 +260,12 @@
                                                         disabled={!correctionText.trim() || correctionLoading}
                                                         className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                     >
-                                                        {correctionLoading ? 'Opravujem...' : 'Oprav Analýzu'}
+                                                        {correctionLoading ? 'Opravujem...' : 'Oprav Len Túto Časť'}
                                                     </button>
                                                 </div>
+                                                <p className="text-xs text-orange-600 mt-2">
+                                                    💡 Tip: Buď konkrétny - "mäso je kuracie" namiesto "všetko je zlé"
+                                                </p>
                                             </div>
                                         )}
 
@@ -263,7 +273,7 @@
                                         {correctionLoading && (
                                             <div className="text-center py-4">
                                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
-                                                <p className="text-gray-600 mt-2 text-sm">Opravujem analýzu...</p>
+                                                <p className="text-gray-600 mt-2 text-sm">Opravujem len spomenutú časť...</p>
                                             </div>
                                         )}
                                         
@@ -331,7 +341,12 @@
                                                                             'carbohydrates': 'Sacharidy',
                                                                             'fat': 'Tuky',
                                                                             'fiber': 'Vláknina',
-                                                                            'sugar': 'Cukry'
+                                                                            'sugar': 'Cukry',
+                                                                            'bielkoviny': 'Bielkoviny',
+                                                                            'sacharidy': 'Sacharidy',
+                                                                            'tuky': 'Tuky',
+                                                                            'vlaknina': 'Vláknina',
+                                                                            'cukry': 'Cukry'
                                                                         };
                                                                         const displayName = slovakNames[key.toLowerCase()] || key.charAt(0).toUpperCase() + key.slice(1);
                                                                         
@@ -342,6 +357,60 @@
                                                                             </tr>
                                                                         );
                                                                     })}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Vitamins */}
+                                                {(analysisResult.vitaminy || analysisResult.vitamins) && (
+                                                    <div className="bg-orange-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-orange-500 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">🍊 Vitamíny</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <table className="w-full">
+                                                                <thead>
+                                                                    <tr className="border-b-2 border-orange-200">
+                                                                        <th className="text-left py-2 font-semibold text-orange-800">Vitamín</th>
+                                                                        <th className="text-right py-2 font-semibold text-orange-800">Denná Hodnota</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {Object.entries(analysisResult.vitaminy || analysisResult.vitamins).map(([key, value]) => (
+                                                                        <tr key={key} className="table-row border-b border-orange-100">
+                                                                            <td className="py-2 capitalize text-gray-700">{key.replace(/([A-Z])/g, ' $1')}:</td>
+                                                                            <td className="text-right py-2 font-medium text-orange-700">{value}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Minerals */}
+                                                {(analysisResult.mineraly || analysisResult.minerals) && (
+                                                    <div className="bg-gray-50 rounded-lg overflow-hidden shadow-sm">
+                                                        <div className="bg-gray-600 text-white px-4 py-3">
+                                                            <h4 className="font-medium flex items-center">⚡ Minerály</h4>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <table className="w-full">
+                                                                <thead>
+                                                                    <tr className="border-b-2 border-gray-300">
+                                                                        <th className="text-left py-2 font-semibold text-gray-800">Minerál</th>
+                                                                        <th className="text-right py-2 font-semibold text-gray-800">Denná Hodnota</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {Object.entries(analysisResult.mineraly || analysisResult.minerals).map(([key, value]) => (
+                                                                        <tr key={key} className="table-row border-b border-gray-200">
+                                                                            <td className="py-2 capitalize text-gray-700">{key}:</td>
+                                                                            <td className="text-right py-2 font-medium text-gray-700">{value}</td>
+                                                                        </tr>
+                                                                    ))}
                                                                 </tbody>
                                                             </table>
                                                         </div>
